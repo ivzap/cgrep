@@ -1,11 +1,26 @@
 use tree_sitter::{Parser, Language, Tree};
+use tokio::task;
+
 unsafe extern "C" { unsafe fn tree_sitter_rust() -> Language; }
 
-pub fn parse_file(path: &str) -> Tree {
-    let source_code = std::fs::read_to_string(path).expect("Failed to read file");
-    let mut parser = Parser::new();
-    parser.set_language(unsafe { tree_sitter_rust() }).expect("Error loading Rust grammar");
-    let tree = parser.parse(&source_code, None).expect("Failed to parse");
-    // You can now use `tree` for further analysis
-    return tree;
+pub async fn parse_file(path: String) -> (String, Tree) {
+    let source_code = tokio::fs::read_to_string(&path)
+        .await
+        .expect("Failed to read file");
+
+    // Move both path and source_code into spawn_blocking closure
+    let path_clone = path.clone();
+    let tree = task::spawn_blocking(move || {
+        let mut parser = Parser::new();
+        unsafe {
+            parser
+                .set_language(tree_sitter_rust())
+                .expect("Error loading Rust grammar");
+        }
+        parser.parse(&source_code, None).expect("Failed to parse")
+    })
+    .await
+    .expect("Parsing task panicked");
+
+    (path_clone, tree)
 }
