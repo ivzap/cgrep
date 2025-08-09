@@ -1,7 +1,6 @@
 
 
 use std::fs;
-use std::path::Path;
 
 /*
 Recursively walks a directory and returns
