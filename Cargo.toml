@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 tree-sitter = "0.20"
 tree-sitter-rust = "0.20"
+crossterm = "0.26"
