@@ -1,17 +1,12 @@
-use std::{collections::HashMap, env};
-use tree_sitter::{Tree, Language};
-use tree_sitter_rust::language as tree_sitter_rust;
-use cgrep::{walk_directory, parse_file, search};
-use std::time::Instant;
+use cgrep::{parse_file, search, walk_directory};
 use futures::future::join_all;
 use std::thread;
+use std::time::Instant;
+use std::{collections::HashMap, env};
+use tree_sitter::{Language, Tree};
+use tree_sitter_rust::language as tree_sitter_rust;
 
-
-fn parallel_search(
-    trees: HashMap<String, Tree>,
-    keyword: &str,
-    language: Language,
-) -> Vec<String> {
+fn parallel_search(trees: HashMap<String, Tree>, keyword: &str, language: Language) -> Vec<String> {
     let num_threads = 4;
     let mut results = Vec::new();
 
@@ -61,20 +56,17 @@ async fn main() {
 
     let exts: Vec<String> = vec!["rs".to_string()];
     let directory = &args[1];
-   
+
     let start: Instant = Instant::now();
 
-    let files = walk_directory(
-        &directory,
-        &exts,
-    );
-    
+    let files = walk_directory(&directory, &exts);
+
     let duration = start.elapsed();
     println!("Directory Walk Elapsed time: {:.2?}", duration);
 
-        println!("╔═════════════════════════════════════════════════════════╗");
-        println!("║                      Searching Paths                    ║");
-        println!("╚═════════════════════════════════════════════════════════╝");
+    println!("╔═════════════════════════════════════════════════════════╗");
+    println!("║                      Searching Paths                    ║");
+    println!("╚═════════════════════════════════════════════════════════╝");
     for file in &files {
         println!("  • {}", file);
     }
@@ -84,7 +76,6 @@ async fn main() {
 
     let duration = start.elapsed();
     println!("Tree generation Elapsed time: {:.2?}", duration);
-
 
     let language = tree_sitter_rust();
 

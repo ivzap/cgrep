@@ -1,10 +1,10 @@
-use tree_sitter::{Query, QueryCursor, Language, Tree};
+use tree_sitter::{Language, Query, QueryCursor, Tree};
 
-use tree_sitter::{Parser};
 use std::fs;
+use tree_sitter::Parser;
 
-use tree_sitter::{Node};
 use std::collections::HashMap;
+use tree_sitter::Node;
 
 fn get_node_text(node: &Node, source: &[u8]) -> String {
     let byte_range = node.byte_range();
@@ -20,10 +20,13 @@ fn get_node_text(node: &Node, source: &[u8]) -> String {
     std::str::from_utf8(&source[byte_range])
         .unwrap_or_else(|e| panic!("Invalid UTF-8 in node text: {}", e))
         .to_string()
-        
 }
 
-fn to_sexp_with_fields(node: &Node, source: &[u8], mut field_start: u32) -> (String, u32) {
+fn to_sexp_with_fields(
+    node: &Node,
+    source: &[u8],
+    mut field_start: u32,
+) -> (String, u32) {
     let kind = node.kind();
 
     if node.child_count() == 0 {
@@ -51,12 +54,17 @@ fn to_sexp_with_fields(node: &Node, source: &[u8], mut field_start: u32) -> (Str
 
             field_start += 1;
 
-            let (child_sexp, new_field_start) = to_sexp_with_fields(&child, &source, field_start);
+            let (child_sexp, new_field_start) =
+                to_sexp_with_fields(&child, &source, field_start);
             field_start = new_field_start;
 
-            parts.push(format!("{}: {} @{}{}", field_name, child_sexp, field_id, eq_expr));
+            parts.push(format!(
+                "{}: {} @{}{}",
+                field_name, child_sexp, field_id, eq_expr
+            ));
         } else {
-            let (child_sexp, new_field_start) = to_sexp_with_fields(&child, &source, field_start);
+            let (child_sexp, new_field_start) =
+                to_sexp_with_fields(&child, &source, field_start);
             field_start = new_field_start;
             parts.push(format!("{}", child_sexp));
         }
@@ -69,12 +77,18 @@ fn to_sexp_with_fields(node: &Node, source: &[u8], mut field_start: u32) -> (Str
     }
 }
 
-pub fn search(trees: HashMap<String, Tree>, keyword: &str, language: Language) -> Vec<String> {
+pub fn search(
+    trees: HashMap<String, Tree>,
+    keyword: &str,
+    language: Language,
+) -> Vec<String> {
     let mut results = Vec::new();
 
     // Parse the keyword into a tree
     let mut parser = Parser::new();
-    parser.set_language(language).expect("Error loading language");
+    parser
+        .set_language(language)
+        .expect("Error loading language");
     let keyword_tree = match parser.parse(&keyword, None) {
         Some(tree) => tree,
         None => {
@@ -95,15 +109,18 @@ pub fn search(trees: HashMap<String, Tree>, keyword: &str, language: Language) -
             return results;
         }
     };
-    
-    let query_pattern = format!("({} @match)", to_sexp_with_fields(&child, &keyword.as_bytes(), 0).0);
+
+    let query_pattern = format!(
+        "({} @match)",
+        to_sexp_with_fields(&child, &keyword.as_bytes(), 0).0
+    );
     let query = Query::new(language, &query_pattern).expect("Invalid query");
     let mut cursor = QueryCursor::new();
 
     for (filename, tree) in trees {
         let root_node = tree.root_node();
         let bytes = fs::read(&filename)
-        .unwrap_or_else(|e| panic!("Failed to read {}: {}", filename, e));
+            .unwrap_or_else(|e| panic!("Failed to read {}: {}", filename, e));
 
         let bytes_slice: &[u8] = &bytes;
         let matches = cursor.matches(&query, root_node, bytes_slice);

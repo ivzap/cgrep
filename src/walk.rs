@@ -2,7 +2,7 @@ use std::fs;
 
 /*
 Recursively walks a directory and returns
-a list of code files to 
+a list of code files to
 */
 pub fn walk_directory(directory: &str, filters: &Vec<String>) -> Vec<String> {
     // TODO: implement
@@ -27,7 +27,6 @@ pub fn walk_directory(directory: &str, filters: &Vec<String>) -> Vec<String> {
         }
     }
     return files;
-    
 }
 
 #[cfg(test)]
@@ -41,10 +40,8 @@ mod tests {
         let test_dir = "test_dir";
         let _ = fs::remove_dir_all(test_dir); // Clean up before test
         match fs::create_dir(test_dir) {
-            Ok(_) => {},
-            Err(e) => {
-                
-            }
+            Ok(_) => {}
+            Err(e) => {}
         }
         // Create files
         let mut file1 = File::create(format!("{}/file1.rs", test_dir)).unwrap();
@@ -54,9 +51,8 @@ mod tests {
         // Create subdirectory
         let sub_dir = format!("{}/sub", test_dir);
         match fs::create_dir(&sub_dir) {
-            Ok(_) => {},
-            Err(e) => {
-            }
+            Ok(_) => {}
+            Err(e) => {}
         }
         let mut file3 = File::create(format!("{}/file3.rs", sub_dir)).unwrap();
         writeln!(file3, "// Rust file in subdir").unwrap();
@@ -79,7 +75,8 @@ mod tests {
         let test_dir = setup_test_dir();
         let filters = vec!["py".to_string()];
         let files = walk_directory(&test_dir, &filters);
-        println!("{:?}", files);  assert!(files.contains(&"file2.py".to_string()));
+        println!("{:?}", files);
+        assert!(files.contains(&"file2.py".to_string()));
         assert!(!files.contains(&"file1.rs".to_string()));
         let _ = fs::remove_dir_all(&test_dir); // Clean up
     }

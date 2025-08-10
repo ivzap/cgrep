@@ -1,14 +1,15 @@
-use tree_sitter::{Parser, Language, Tree};
 use tokio::task;
+use tree_sitter::{Language, Parser, Tree};
 
-unsafe extern "C" { unsafe fn tree_sitter_rust() -> Language; }
+unsafe extern "C" {
+    unsafe fn tree_sitter_rust() -> Language;
+}
 
 pub async fn parse_file(path: String) -> (String, Tree) {
     let source_code = tokio::fs::read_to_string(&path)
         .await
         .expect("Failed to read file");
 
-    // Move both path and source_code into spawn_blocking closure
     let path_clone: String = path.clone();
     let tree = task::spawn_blocking(move || {
         let mut parser = Parser::new();
