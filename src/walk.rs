@@ -16,7 +16,9 @@ pub fn walk_directory(directory: &str, filters: &Vec<String>) -> Vec<String> {
                     files.extend(walk_directory(subdir, filters));
                 }
             } else {
-                if let Some(ext) = entry_path.extension().and_then(|e| e.to_str()) {
+                if let Some(ext) =
+                    entry_path.extension().and_then(|e| e.to_str())
+                {
                     if filters.contains(&ext.to_string()) {
                         if let Some(path_str) = entry_path.to_str() {
                             files.push(path_str.to_string());

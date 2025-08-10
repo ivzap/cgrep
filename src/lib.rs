@@ -3,5 +3,7 @@ pub mod search;
 pub mod walk;
 
 pub use parse::parse_file;
+pub use parse::parse_files_async;
+pub use search::parallel_search;
 pub use search::search;
 pub use walk::walk_directory;

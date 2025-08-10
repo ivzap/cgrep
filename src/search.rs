@@ -1,6 +1,6 @@
 use tree_sitter::{Language, Query, QueryCursor, Tree};
 
-use std::fs;
+use std::{fs, thread};
 use tree_sitter::Parser;
 
 use std::collections::HashMap;
@@ -134,6 +134,40 @@ pub fn search(
                 results.push(format!("{}:{}:{}", filename, row, col));
             }
         }
+    }
+
+    results
+}
+
+pub fn parallel_search(
+    trees: HashMap<String, Tree>,
+    keyword: &str,
+    language: Language,
+) -> Vec<String> {
+    let num_threads = 4;
+    let mut results = Vec::new();
+
+    let entries: Vec<_> = trees.into_iter().collect();
+    let chunk_size = (entries.len() + num_threads - 1) / num_threads;
+
+    let chunks: Vec<_> =
+        entries.chunks(chunk_size).map(|c| c.to_vec()).collect();
+
+    let mut handles = Vec::new();
+
+    for chunk in chunks {
+        let keyword = keyword.to_string();
+        let language = language;
+        let handle = thread::spawn(move || {
+            let map: HashMap<String, Tree> = chunk.into_iter().collect();
+
+            search(map, &keyword, language)
+        });
+        handles.push(handle);
+    }
+
+    for handle in handles {
+        results.extend(handle.join().expect("Thread panicked"));
     }
 
     results

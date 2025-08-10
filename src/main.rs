@@ -1,47 +1,10 @@
-use cgrep::{parse_file, search, walk_directory};
-use futures::future::join_all;
-use std::thread;
+use cgrep::{parallel_search, parse_files_async, walk_directory};
+
 use std::time::Instant;
 use std::{collections::HashMap, env};
-use tree_sitter::{Language, Tree};
+use tree_sitter::Tree;
 use tree_sitter_rust::language as tree_sitter_rust;
 
-fn parallel_search(trees: HashMap<String, Tree>, keyword: &str, language: Language) -> Vec<String> {
-    let num_threads = 4;
-    let mut results = Vec::new();
-
-    let entries: Vec<_> = trees.into_iter().collect();
-    let chunk_size = (entries.len() + num_threads - 1) / num_threads;
-
-    let chunks: Vec<_> = entries.chunks(chunk_size).map(|c| c.to_vec()).collect();
-
-    let mut handles = Vec::new();
-
-    for chunk in chunks {
-        let keyword = keyword.to_string();
-        let language = language;
-        let handle = thread::spawn(move || {
-            let map: HashMap<String, Tree> = chunk.into_iter().collect();
-
-            search(map, &keyword, language)
-        });
-        handles.push(handle);
-    }
-
-    for handle in handles {
-        results.extend(handle.join().expect("Thread panicked"));
-    }
-
-    results
-}
-
-async fn parse_files_async(files: Vec<String>) -> HashMap<String, Tree> {
-    let futures = files.into_iter().map(|file| parse_file(file));
-
-    let results = join_all(futures).await;
-
-    results.into_iter().collect()
-}
 #[tokio::main]
 async fn main() {
     // Get the search pattern from command line args

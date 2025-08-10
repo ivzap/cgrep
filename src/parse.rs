@@ -1,3 +1,5 @@
+use futures::future::join_all;
+use std::collections::HashMap;
 use tokio::task;
 use tree_sitter::{Language, Parser, Tree};
 
@@ -24,4 +26,12 @@ pub async fn parse_file(path: String) -> (String, Tree) {
     .expect("Parsing task panicked");
 
     (path_clone, tree)
+}
+
+pub async fn parse_files_async(files: Vec<String>) -> HashMap<String, Tree> {
+    let futures = files.into_iter().map(|file| parse_file(file));
+
+    let results = join_all(futures).await;
+
+    results.into_iter().collect()
 }
