@@ -9,7 +9,7 @@ pub async fn parse_file(path: String) -> (String, Tree) {
         .expect("Failed to read file");
 
     // Move both path and source_code into spawn_blocking closure
-    let path_clone = path.clone();
+    let path_clone: String = path.clone();
     let tree = task::spawn_blocking(move || {
         let mut parser = Parser::new();
         unsafe {

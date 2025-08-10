@@ -1,9 +1,49 @@
 use std::{collections::HashMap, env};
-use tree_sitter::{Tree};
+use tree_sitter::{Tree, Language};
 use tree_sitter_rust::language as tree_sitter_rust;
 use cgrep::{walk_directory, parse_file, search};
 use std::time::Instant;
 use futures::future::join_all;
+use std::thread;
+
+
+fn parallel_search(
+    trees: HashMap<String, Tree>,
+    keyword: &str,
+    language: Language,
+) -> Vec<String> {
+    let num_threads = 4;
+    let mut results = Vec::new();
+
+    // Convert to Vec to chunk
+    let entries: Vec<_> = trees.into_iter().collect();
+    let chunk_size = (entries.len() + num_threads - 1) / num_threads;
+
+    let chunks: Vec<_> = entries.chunks(chunk_size).map(|c| c.to_vec()).collect();
+
+    let mut handles = Vec::new();
+
+    for chunk in chunks {
+        // Move owned copies into the thread
+        let keyword = keyword.to_string();
+        let language = language;
+        let handle = thread::spawn(move || {
+            // Rebuild HashMap inside thread from chunk
+            let map: HashMap<String, Tree> = chunk.into_iter().collect();
+
+            // Run the search
+            search(map, &keyword, language)
+        });
+        handles.push(handle);
+    }
+
+    // Join threads and collect all results
+    for handle in handles {
+        results.extend(handle.join().expect("Thread panicked"));
+    }
+
+    results
+}
 
 async fn parse_files_async(files: Vec<String>) -> HashMap<String, Tree> {
     let futures = files.into_iter().map(|file| parse_file(file));
@@ -55,8 +95,8 @@ async fn main() {
 
     let start = Instant::now();
 
-    let results = search(trees, keyword, language);
-    
+    let results = parallel_search(trees, keyword, language);
+
     let duration = start.elapsed();
     println!("Search Elapsed time: {:.2?}", duration);
 

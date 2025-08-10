@@ -22,7 +22,7 @@ fn get_node_text(node: &Node, source: &[u8]) -> String {
         .to_string()
 }
 
-fn to_sexp_with_fields(node: &Node, source: &[u8]) -> String {
+fn to_sexp_with_fields(node: &Node, source: &[u8], field_start: u32) -> String {
     let kind = node.kind();
 
     // Leaf node: just print kind (or you can include text if you want)
@@ -39,10 +39,11 @@ fn to_sexp_with_fields(node: &Node, source: &[u8]) -> String {
             continue;
         }
         
-        let child_sexp = to_sexp_with_fields(&child, &source);
-        
+        let child_sexp = to_sexp_with_fields(&child, &source, field_start+1);
+        // TODO: make the @variable be unique
         if let Some(field_name) = node.field_name_for_child(i as u32) {
-            parts.push(format!("{}: {} @{} (#eq? @{} \"{}\")", field_name, child_sexp, field_name, field_name, get_node_text(&child, &source)));
+            let field_id: String = field_name.to_string() + &field_start.to_string(); 
+            parts.push(format!("{}: {} @{} (#eq? @{} \"{}\")", field_name, child_sexp, field_id, field_id, get_node_text(&child, &source)));
         } else {
             parts.push(format!("{}", child_sexp));
         }
@@ -81,7 +82,7 @@ pub fn search(trees: HashMap<String, Tree>, keyword: &str, language: Language) -
         }
     };
     
-    let query_pattern = format!("({} @match)", to_sexp_with_fields(&child, &keyword.as_bytes()));
+    let query_pattern = format!("({} @match)", to_sexp_with_fields(&child, &keyword.as_bytes(), 0));
     let query = Query::new(language, &query_pattern).expect("Invalid query");
     let mut cursor = QueryCursor::new();
 
