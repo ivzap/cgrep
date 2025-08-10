@@ -15,7 +15,6 @@ fn parallel_search(
     let num_threads = 4;
     let mut results = Vec::new();
 
-    // Convert to Vec to chunk
     let entries: Vec<_> = trees.into_iter().collect();
     let chunk_size = (entries.len() + num_threads - 1) / num_threads;
 
@@ -24,20 +23,16 @@ fn parallel_search(
     let mut handles = Vec::new();
 
     for chunk in chunks {
-        // Move owned copies into the thread
         let keyword = keyword.to_string();
         let language = language;
         let handle = thread::spawn(move || {
-            // Rebuild HashMap inside thread from chunk
             let map: HashMap<String, Tree> = chunk.into_iter().collect();
 
-            // Run the search
             search(map, &keyword, language)
         });
         handles.push(handle);
     }
 
-    // Join threads and collect all results
     for handle in handles {
         results.extend(handle.join().expect("Thread panicked"));
     }

@@ -20,6 +20,7 @@ fn get_node_text(node: &Node, source: &[u8]) -> String {
     std::str::from_utf8(&source[byte_range])
         .unwrap_or_else(|e| panic!("Invalid UTF-8 in node text: {}", e))
         .to_string()
+        
 }
 
 fn to_sexp_with_fields(node: &Node, source: &[u8], field_start: u32) -> String {
