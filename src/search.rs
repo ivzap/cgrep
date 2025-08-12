@@ -1,10 +1,43 @@
+use std::time::Instant;
 use tree_sitter::{Language, Query, QueryCursor, Tree};
 
 use std::{fs, thread};
 use tree_sitter::Parser;
 
 use std::collections::HashMap;
+use std::sync::Arc;
 use tree_sitter::Node;
+
+pub fn compile_keyword(keyword: &str, language: Language) -> Arc<Query> {
+    let mut parser = Parser::new();
+    parser
+        .set_language(language)
+        .expect("Error loading language");
+    let keyword_tree = match parser.parse(&keyword, None) {
+        Some(tree) => tree,
+        None => {
+            panic!("couldnt parse keyword");
+        }
+    };
+
+    let keyword_root = keyword_tree.root_node();
+    if keyword_root.is_missing() {
+        println!("keyword_tree is invalid");
+    }
+
+    let child = match keyword_root.child(0) {
+        Some(c) => c,
+        None => {
+            panic!("Child is invalid");
+        }
+    };
+
+    let query_pattern = format!(
+        "({} @match)",
+        to_sexp_with_fields(&child, &keyword.as_bytes(), 0).0
+    );
+    Arc::new(Query::new(language, &query_pattern).expect("Invalid query"))
+}
 
 fn get_node_text(node: &Node, source: &[u8]) -> String {
     let byte_range = node.byte_range();
@@ -78,52 +111,25 @@ fn to_sexp_with_fields(
 }
 
 pub fn search(
+    query: &Query,
     trees: HashMap<String, Tree>,
     keyword: &str,
     language: Language,
 ) -> Vec<String> {
     let mut results = Vec::new();
 
-    // Parse the keyword into a tree
-    let mut parser = Parser::new();
-    parser
-        .set_language(language)
-        .expect("Error loading language");
-    let keyword_tree = match parser.parse(&keyword, None) {
-        Some(tree) => tree,
-        None => {
-            println!("Failed to parse keyword");
-            return results;
-        }
-    };
-
-    let keyword_root = keyword_tree.root_node();
-    if keyword_root.is_missing() {
-        println!("keyword_tree is invalid");
-        return results;
-    }
-
-    let child = match keyword_root.child(0) {
-        Some(c) => c,
-        None => {
-            return results;
-        }
-    };
-
-    let query_pattern = format!(
-        "({} @match)",
-        to_sexp_with_fields(&child, &keyword.as_bytes(), 0).0
-    );
-    let query = Query::new(language, &query_pattern).expect("Invalid query");
     let mut cursor = QueryCursor::new();
 
     for (filename, tree) in trees {
         let root_node = tree.root_node();
+
         let bytes = fs::read(&filename)
             .unwrap_or_else(|e| panic!("Failed to read {}: {}", filename, e));
 
         let bytes_slice: &[u8] = &bytes;
+
         let matches = cursor.matches(&query, root_node, bytes_slice);
+
         for m in matches {
             for cap in m.captures {
                 let node = cap.node;
@@ -132,6 +138,7 @@ pub fn search(
                 let row = start.row + 1;
                 let col = start.column + 1;
                 results.push(format!("{}:{}:{}", filename, row, col));
+                break;
             }
         }
     }
@@ -140,6 +147,7 @@ pub fn search(
 }
 
 pub fn parallel_search(
+    query: Arc<Query>,
     trees: HashMap<String, Tree>,
     keyword: &str,
     language: Language,
@@ -158,17 +166,27 @@ pub fn parallel_search(
     for chunk in chunks {
         let keyword = keyword.to_string();
         let language = language;
+        let query_clone = Arc::clone(&query);
         let handle = thread::spawn(move || {
             let map: HashMap<String, Tree> = chunk.into_iter().collect();
-
-            search(map, &keyword, language)
+            let start = Instant::now();
+            let res = search(&query_clone, map, &keyword, language);
+            let duration = start.elapsed();
+            println!("search() on chunk took: {:?}", duration);
+            res
         });
         handles.push(handle);
     }
 
+    let start = Instant::now();
+
     for handle in handles {
         results.extend(handle.join().expect("Thread panicked"));
     }
+
+    let duration = start.elapsed();
+
+    println!("All search() calls finished... Took: {:?}", duration);
 
     results
 }

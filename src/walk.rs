@@ -5,8 +5,6 @@ Recursively walks a directory and returns
 a list of code files to
 */
 pub fn walk_directory(directory: &str, filters: &Vec<String>) -> Vec<String> {
-    // TODO: implement
-    // make a mutable vector of strings
     let mut files: Vec<String> = Vec::new();
     if let Ok(entries) = fs::read_dir(directory) {
         for entry in entries.flatten() {
@@ -36,7 +34,6 @@ mod tests {
     use super::*;
     use std::fs::{self, File};
     use std::io::Write;
-    use std::path::Path;
 
     fn setup_test_dir() -> String {
         let test_dir = "test_dir";
