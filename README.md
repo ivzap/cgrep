@@ -14,4 +14,7 @@ For example:
 cgrep <search-directory> <code>
 ```
 
+## System Design ⚙️
+
+<img width="1456" height="1020" alt="image" src="https://github.com/user-attachments/assets/64a66920-b6b4-4070-8903-e1a219bfb8a8" />
 
